@@ -2,22 +2,18 @@ import os
 import uuid
 import json
 import httpx
-from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from zep_cloud.client import Zep
 from zep_cloud.types import Message
 import traceback
 
-load_dotenv()
-
-# Aquí pones tu API key fija directamente (cambia esta línea)
 OPENROUTER_API_KEY = "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"
-
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-API_KEY_ZEP = os.getenv("ZEP_API_KEY")
-USER_ID = os.getenv("USER_ID", "usuario")
+API_KEY_ZEP = "z_1dWlkIjoiNDAzNGY4NWItZWNhNy00NDMzLTk0ZDYtZDgwMTQ4ODlkZWE1In0.1cRlgUEMR5e6P2j358Tt9JrpjvkYqgFvZ5KVOC0DEWvGi_kYVO312koNTEoO8t0bzy1LomtYnaaqR6uQ36v0CQ"
+USER_ID = "usuario"
+
 SESSION_ID = os.getenv("SESSION_ID")
 
 client = None
@@ -37,12 +33,15 @@ class ChatResponse(BaseModel):
     respuesta: str
 
 async def query_openrouter(messages):
+    if not OPENROUTER_API_KEY:
+        raise Exception("OPENROUTER_API_KEY no está definida")
+
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
     }
     json_data = {
-        "model": "qwen/qwen-2.5-72b-instruct:free",
+        "model": "qwen/qwen3-32b:free",
         "messages": messages,
         "max_tokens": 1000,
         "temperature": 0.7,
