@@ -41,7 +41,7 @@ async def query_openrouter(messages):
         "Content-Type": "application/json",
     }
     json_data = {
-        "model": "qwen/qwen3-32b:free",
+        "model": "qwen/qwen-2.5-72b-instruct:free",
         "messages": messages,
         "max_tokens": 1000,
         "temperature": 0.7,
