@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from zep_cloud.client import Zep
 from zep_cloud.types import Message
+import traceback
 
 load_dotenv()
 
@@ -17,12 +18,10 @@ API_KEY_ZEP = os.getenv("ZEP_API_KEY")
 USER_ID = os.getenv("USER_ID", "usuario_miku")
 SESSION_ID = os.getenv("SESSION_ID")
 
-# Inicializamos cliente Zep si API key existe
 client = None
 if API_KEY_ZEP:
     client = Zep(api_key=API_KEY_ZEP)
 
-# Crear sesión si no existe
 if not SESSION_ID:
     SESSION_ID = uuid.uuid4().hex
     print(f"Nuevo SESSION_ID: {SESSION_ID}")
@@ -54,55 +53,66 @@ async def query_openrouter(messages):
 
 @app.post("/chat", response_model=ChatResponse)
 async def chatear(request: ChatRequest):
-    # Guardar mensaje del usuario en Zep (si está configurado)
-    if client:
-        try:
-            mensaje_usuario = Message(
-                role="user",
-                content=request.mensaje,
-                role_type="user"
-            )
-            client.memory.add(SESSION_ID, messages=[mensaje_usuario])
-        except Exception:
-            pass
-
-    # Obtener el contexto resumido desde Zep (memoria contextual)
-    contexto = ""
-    if client:
-        try:
-            memoria = client.memory.get(session_id=SESSION_ID)
-            contexto = memoria.context or ""
-        except Exception:
-            contexto = ""
-
-    # Construir mensajes para el LLM incluyendo el contexto
-    openrouter_messages = [
-        {"role": "system", "content": "Eres un asistente útil y amigable."}
-    ]
-
-    if contexto:
-        # Incluir el contexto resumido como mensaje system para contexto general
-        openrouter_messages.append({"role": "system", "content": f"Contexto del usuario: {contexto}"})
-
-    # Mensaje actual del usuario
-    openrouter_messages.append({"role": "user", "content": request.mensaje})
-
-    # Llamar al LLM con los mensajes completos
     try:
+        if client:
+            try:
+                client.user.add(
+                    user_id=USER_ID,
+                    email="usuario@example.com",
+                    first_name="Miku",
+                    last_name="User"
+                )
+            except Exception:
+                pass
+
+            try:
+                sesiones = client.memory.list_sessions(page_size=100, page_number=1)
+                if SESSION_ID not in [s.session_id for s in sesiones.sessions]:
+                    client.memory.add_session(session_id=SESSION_ID, user_id=USER_ID)
+            except Exception:
+                pass
+
+            try:
+                mensaje_usuario = Message(
+                    role="Miku",
+                    content=request.mensaje,
+                    role_type="user"
+                )
+                client.memory.add(SESSION_ID, messages=[mensaje_usuario])
+            except Exception:
+                pass
+
+        contexto = ""
+        if client:
+            try:
+                memoria = client.memory.get(session_id=SESSION_ID)
+                contexto = memoria.context or ""
+            except Exception:
+                contexto = ""
+
+        openrouter_messages = [
+            {"role": "system", "content": "Eres un asistente útil y amigable."}
+        ]
+        if contexto:
+            openrouter_messages.append({"role": "user", "content": contexto})
+
+        openrouter_messages.append({"role": "user", "content": request.mensaje})
+
         respuesta_llm = await query_openrouter(openrouter_messages)
+
+        if client:
+            try:
+                mensaje_asistente = Message(
+                    role="Asistente Miku",
+                    content=respuesta_llm,
+                    role_type="assistant"
+                )
+                client.memory.add(SESSION_ID, messages=[mensaje_asistente])
+            except Exception:
+                pass
+
+        return {"respuesta": respuesta_llm}
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error llamando a OpenRouter: {e}")
-
-    # Guardar la respuesta del asistente en Zep
-    if client:
-        try:
-            mensaje_asistente = Message(
-                role="assistant",
-                content=respuesta_llm,
-                role_type="assistant"
-            )
-            client.memory.add(SESSION_ID, messages=[mensaje_asistente])
-        except Exception:
-            pass
-
-    return {"respuesta": respuesta_llm}
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
