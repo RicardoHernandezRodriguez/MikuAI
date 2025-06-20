@@ -11,7 +11,9 @@ import traceback
 
 load_dotenv()
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+# Aquí pones tu API key fija directamente (cambia esta línea)
+OPENROUTER_API_KEY = "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"
+
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 API_KEY_ZEP = os.getenv("ZEP_API_KEY")
@@ -35,10 +37,6 @@ class ChatResponse(BaseModel):
     respuesta: str
 
 async def query_openrouter(messages):
-    if not OPENROUTER_API_KEY:
-        raise Exception("OPENROUTER_API_KEY no está definida")
-    print(f"Usando OPENROUTER_API_KEY: {OPENROUTER_API_KEY[:5]}...")  # muestra solo inicio para evitar exponer clave
-
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
