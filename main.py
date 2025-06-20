@@ -15,7 +15,7 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 API_KEY_ZEP = os.getenv("ZEP_API_KEY")
-USER_ID = os.getenv("USER_ID", "usuario_miku")
+USER_ID = os.getenv("USER_ID", "usuario")
 SESSION_ID = os.getenv("SESSION_ID")
 
 client = None
@@ -35,6 +35,10 @@ class ChatResponse(BaseModel):
     respuesta: str
 
 async def query_openrouter(messages):
+    if not OPENROUTER_API_KEY:
+        raise Exception("OPENROUTER_API_KEY no está definida")
+    print(f"Usando OPENROUTER_API_KEY: {OPENROUTER_API_KEY[:5]}...")  # muestra solo inicio para evitar exponer clave
+
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
