@@ -12,7 +12,7 @@ import traceback
 load_dotenv()
 
 # Aquí pones tu API key fija directamente (cambia esta línea)
-OPENROUTER_API_KEY = "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"
+OPENROUTER_API_KEY = "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"
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
