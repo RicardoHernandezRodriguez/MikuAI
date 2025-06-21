@@ -17,7 +17,7 @@ def query(request: chatRequest):
         response = requests.post(
             url = "https://openrouter.ai/api/v1/chat/completions",
             headers={
-                "Authorization": "Bearer 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",
+                "Authorization": "Bearer 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",
                 "Content-Type": "application/json",
             },
             data = json.dumps({
