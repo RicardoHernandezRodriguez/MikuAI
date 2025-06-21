@@ -40,7 +40,7 @@ async def query_openrouter(messages_texts):
 
     content_list = [{"type": "text", "text": txt} for txt in messages_texts]
     payload = {
-        "model": "qwen/qwen2.5-vl-72b-instruct:free",
+        "model": "qwen/qwen2.5-72b-instruct:free",
         "messages": [{"role": "user", "content": content_list}],
         "max_tokens": 1000,
         "temperature": 0.7,
