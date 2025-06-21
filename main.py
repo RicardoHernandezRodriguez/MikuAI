@@ -11,7 +11,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     respuesta: str
 
-API_KEY = "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"
+API_KEY = "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"
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
