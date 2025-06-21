@@ -7,9 +7,6 @@ from zep_cloud.client import Zep
 from zep_cloud.types import Message
 import traceback
 
-OPENROUTER_API_KEY = "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"
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-
 API_KEY_ZEP = "z_1dWlkIjoiNDAzNGY4NWItZWNhNy00NDMzLTk0ZDYtZDgwMTQ4ODlkZWE1In0.1cRlgUEMR5e6P2j358Tt9JrpjvkYqgFvZ5KVOC0DEWvGi_kYVO312koNTEoO8t0bzy1LomtYnaaqR6uQ36v0CQ"
 USER_ID = "usuario"
 SESSION_ID = os.getenv("SESSION_ID")
@@ -31,8 +28,9 @@ class ChatResponse(BaseModel):
     respuesta: str
 
 async def query_openrouter(messages_texts):
+    url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Authorization": "Bearer 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",
         "Content-Type": "application/json",
     }
     content_list = [{"type": "text", "text": txt} for txt in messages_texts]
@@ -50,7 +48,7 @@ async def query_openrouter(messages_texts):
     }
 
     async with httpx.AsyncClient(timeout=30.0) as client_http:
-        response = await client_http.post(OPENROUTER_URL, headers=headers, json=payload)
+        response = await client_http.post(url, headers=headers, json=payload)
         response.raise_for_status()
         data = response.json()
         return data["choices"][0]["message"]["content"]
@@ -94,7 +92,6 @@ async def chatear(request: ChatRequest):
             except Exception:
                 contexto = ""
 
-        # Pasamos como lista el contexto y el mensaje para formar el array content en OpenRouter
         messages_for_llm = []
         if contexto:
             messages_for_llm.append(contexto)
