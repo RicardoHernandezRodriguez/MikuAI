@@ -7,21 +7,23 @@ from zep_cloud.client import Zep
 from zep_cloud.types import Message
 import traceback
 
-OPENROUTER_API_KEY = "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"
+# Cargar claves y configuraciones desde variables de entorno
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+ZEP_API_KEY = os.getenv("ZEP_API_KEY")
+SESSION_ID = os.getenv("SESSION_ID", uuid.uuid4().hex)
+USER_ID = "usuario"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-API_KEY_ZEP = "z_1dWlkIjoiNDAzNGY4NWItZWNhNy00NDMzLTk0ZDYtZDgwMTQ4ODlkZWE1In0.1cRlgUEMR5e6P2j358Tt9JrpjvkYqgFvZ5KVOC0DEWvGi_kYVO312koNTEoO8t0bzy1LomtYnaaqR6uQ36v0CQ"
-USER_ID = "usuario"
-SESSION_ID = os.getenv("SESSION_ID")
+# Verificación básica
+if not OPENROUTER_API_KEY:
+    raise RuntimeError("La variable de entorno OPENROUTER_API_KEY no está definida.")
+if not ZEP_API_KEY:
+    raise RuntimeError("La variable de entorno ZEP_API_KEY no está definida.")
 
-client = None
-if API_KEY_ZEP:
-    client = Zep(api_key=API_KEY_ZEP)
+# Cliente de memoria Zep
+zep_client = Zep(api_key=ZEP_API_KEY)
 
-if not SESSION_ID:
-    SESSION_ID = uuid.uuid4().hex
-    print(f"Nuevo SESSION_ID: {SESSION_ID}")
-
+# Instancia de FastAPI
 app = FastAPI()
 
 class ChatRequest(BaseModel):
@@ -35,22 +37,17 @@ async def query_openrouter(messages_texts):
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
     }
-    content_list = [{"type": "text", "text": txt} for txt in messages_texts]
 
+    content_list = [{"type": "text", "text": txt} for txt in messages_texts]
     payload = {
-        "model": "qwen/qwen2.5-vl-72b-instruct:free",
-        "messages": [
-            {
-                "role": "user",
-                "content": content_list
-            }
-        ],
+        "model": "qwen/qwen2.5-72b-instruct:free",
+        "messages": [{"role": "user", "content": content_list}],
         "max_tokens": 1000,
         "temperature": 0.7,
     }
 
-    async with httpx.AsyncClient(timeout=30.0) as client_http:
-        response = await client_http.post(OPENROUTER_URL, headers=headers, json=payload)
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.post(OPENROUTER_URL, headers=headers, json=payload)
         response.raise_for_status()
         data = response.json()
         return data["choices"][0]["message"]["content"]
@@ -58,65 +55,66 @@ async def query_openrouter(messages_texts):
 @app.post("/chat", response_model=ChatResponse)
 async def chatear(request: ChatRequest):
     try:
-        if client:
-            try:
-                client.user.add(
-                    user_id=USER_ID,
-                    email="usuario@example.com",
-                    first_name="Miku",
-                    last_name="User"
-                )
-            except Exception:
-                pass
+        # Registro del usuario en Zep (opcional pero útil)
+        try:
+            zep_client.user.add(
+                user_id=USER_ID,
+                email="usuario@example.com",
+                first_name="Miku",
+                last_name="User"
+            )
+        except Exception:
+            pass
 
-            try:
-                sesiones = client.memory.list_sessions(page_size=100, page_number=1)
-                if SESSION_ID not in [s.session_id for s in sesiones.sessions]:
-                    client.memory.add_session(session_id=SESSION_ID, user_id=USER_ID)
-            except Exception:
-                pass
+        # Crear sesión si no existe
+        try:
+            sesiones = zep_client.memory.list_sessions(page_size=100, page_number=1)
+            if SESSION_ID not in [s.session_id for s in sesiones.sessions]:
+                zep_client.memory.add_session(session_id=SESSION_ID, user_id=USER_ID)
+        except Exception:
+            pass
 
-            try:
-                mensaje_usuario = Message(
-                    role="Miku",
-                    content=request.mensaje,
-                    role_type="user"
-                )
-                client.memory.add(SESSION_ID, messages=[mensaje_usuario])
-            except Exception:
-                pass
+        # Guardar mensaje del usuario
+        try:
+            mensaje_usuario = Message(
+                role="Miku",
+                content=request.mensaje,
+                role_type="user"
+            )
+            zep_client.memory.add(SESSION_ID, messages=[mensaje_usuario])
+        except Exception:
+            pass
 
+        # Obtener contexto previo si existe
         contexto = ""
-        if client:
-            try:
-                memoria = client.memory.get(session_id=SESSION_ID)
-                contexto = memoria.context or ""
-            except Exception:
-                contexto = ""
+        try:
+            memoria = zep_client.memory.get(session_id=SESSION_ID)
+            contexto = memoria.context or ""
+        except Exception:
+            pass
 
-        # Pasamos como lista el contexto y el mensaje para formar el array content en OpenRouter
-        messages_for_llm = []
+        # Preparar mensajes para enviar al modelo
+        mensajes_para_llm = []
         if contexto:
-            messages_for_llm.append(contexto)
-        messages_for_llm.append(request.mensaje)
+            mensajes_para_llm.append(contexto)
+        mensajes_para_llm.append(request.mensaje)
 
-        respuesta_llm = await query_openrouter(messages_for_llm)
+        # Consultar al modelo
+        respuesta_llm = await query_openrouter(mensajes_para_llm)
 
-        if client:
-            try:
-                mensaje_asistente = Message(
-                    role="Asistente Miku",
-                    content=respuesta_llm,
-                    role_type="assistant"
-                )
-                client.memory.add(SESSION_ID, messages=[mensaje_asistente])
-            except Exception:
-                pass
+        # Guardar respuesta del asistente
+        try:
+            mensaje_asistente = Message(
+                role="Asistente Miku",
+                content=respuesta_llm,
+                role_type="assistant"
+            )
+            zep_client.memory.add(SESSION_ID, messages=[mensaje_asistente])
+        except Exception:
+            pass
 
         return {"respuesta": respuesta_llm}
 
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
-
-  
