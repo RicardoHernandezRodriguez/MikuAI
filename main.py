@@ -118,3 +118,4 @@ async def chatear(request: ChatRequest):
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
