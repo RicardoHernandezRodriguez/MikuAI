@@ -1,16 +1,15 @@
-import logging
+import os
 import requests
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 app = FastAPI()
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger("mikuapi")
-
-API_KEY = "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"
+API_KEY = os.getenv("OPENROUTER_API_KEY")
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
-MODEL = "qwen/qwen2.5-vl-72b-instruct:free"
+
+if not API_KEY:
+    raise RuntimeError("La variable de entorno OPENROUTER_API_KEY no está definida.")
 
 class ChatRequest(BaseModel):
     mensaje: str
@@ -18,47 +17,26 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     respuesta: str
 
-@app.get("/")
-async def root():
-    return {"message": "Hellow"}
-
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
-    logger.debug(f"Recibido mensaje: {request.mensaje}")
-
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json"
     }
-
-    payload = {
-        "model": MODEL,
+    json_data = {
+        "model": "qwen/qwen2.5-vl-72b-instruct:free",
         "messages": [
-            {
-                "role": "user",
-                "content": [{"type": "text", "text": request.mensaje}]
-            }
+            {"role": "user", "content": request.mensaje}
         ]
     }
 
-    logger.debug(f"Payload para OpenRouter: {payload}")
-
     try:
-        response = requests.post(API_URL, json=payload, headers=headers)
-        logger.debug(f"Respuesta HTTP: {response.status_code}")
-        response.raise_for_status()  # Lanza error si status no es 200 OK
+        response = requests.post(API_URL, headers=headers, json=json_data)
+        response.raise_for_status()
         data = response.json()
-        logger.debug(f"Respuesta JSON: {data}")
-
-        # Extraemos la respuesta del modelo
         respuesta = data["choices"][0]["message"]["content"]
-        logger.debug(f"Respuesta procesada: {respuesta}")
-
-        return ChatResponse(respuesta=respuesta)
-
-    except requests.exceptions.HTTPError as http_err:
-        logger.error(f"HTTP error: {http_err} - Respuesta: {response.text}")
-        raise HTTPException(status_code=response.status_code, detail=response.text)
+        return {"respuesta": respuesta}
+    except requests.HTTPError as e:
+        raise HTTPException(status_code=response.status_code, detail=f"Error HTTP: {e.response.text}")
     except Exception as e:
-        logger.error(f"Error inesperado: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
