@@ -1,19 +1,19 @@
+import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import requests
 import json
-import traceback
 
 app = FastAPI()
 
-class chatRequest(BaseModel):
+class ChatRequest(BaseModel):
     mensaje: str
 
-class chatResponse(BaseModel):
+class ChatResponse(BaseModel):
     respuesta: str
 
-@app.post("/chat", response_model=chatResponse)
-def query(request: chatRequest):
+@app.post("/chat", response_model=ChatResponse)
+def query(request: ChatRequest):
     try:
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
@@ -41,5 +41,10 @@ def query(request: chatRequest):
         contenido = data["choices"][0]["message"]["content"]
         return {"respuesta": contenido}
     except Exception as e:
-        traceback.print_exc()  # Aquí imprime el traceback completo en los logs
         raise HTTPException(status_code=500, detail=str(e))
+
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", 10000))  # Lee variable PORT o usa 10000
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
