@@ -17,7 +17,7 @@ def query(request: chatRequest):
         response = requests.post(
             url = "https://openrouter.ai/api/v1/chat/completions",
             headers={
-                "Authorization": "Bearer <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>",
+                "Authorization": "Bearer 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",
                 "Content-Type": "application/json",
             },
             data = json.dumps({
@@ -28,7 +28,7 @@ def query(request: chatRequest):
                         "content": [
                             {
                                 "type": "text",
-                                "text":"Como estas?"
+                                "text": request.mensaje
                             }
                         ]
                     }
@@ -36,7 +36,7 @@ def query(request: chatRequest):
             })
         )
         response.raise_for_status()
-        data = response.json
+        data = response.json()
         contenido = data["choices"][0]["message"]["content"]
         return {"respuesta": contenido}
     except Exception as e:
