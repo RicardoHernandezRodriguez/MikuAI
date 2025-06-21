@@ -32,16 +32,19 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     respuesta: str
 
+# ✅ Versión corregida para OpenRouter + Qwen2.5
 async def query_openrouter(messages_texts):
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
     }
 
-    content_list = [{"type": "text", "text": txt} for txt in messages_texts]
+    # Unir todos los textos como un solo string
+    combined_text = "\n".join(messages_texts)
+
     payload = {
         "model": "qwen/qwen2.5-72b-instruct:free",
-        "messages": [{"role": "user", "content": content_list}],
+        "messages": [{"role": "user", "content": combined_text}],
         "max_tokens": 1000,
         "temperature": 0.7,
     }
@@ -55,7 +58,7 @@ async def query_openrouter(messages_texts):
 @app.post("/chat", response_model=ChatResponse)
 async def chatear(request: ChatRequest):
     try:
-        # Registro del usuario en Zep (opcional pero útil)
+        # Registro del usuario en Zep
         try:
             zep_client.user.add(
                 user_id=USER_ID,
@@ -118,4 +121,3 @@ async def chatear(request: ChatRequest):
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
- 
