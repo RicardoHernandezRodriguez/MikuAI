@@ -18,6 +18,10 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     respuesta: str
 
+@app.get("/")
+async def root():
+    return {"message": "Hellow"}
+
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
     logger.debug(f"Recibido mensaje: {request.mensaje}")
