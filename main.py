@@ -8,7 +8,7 @@ app = FastAPI()
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("mikuapi")
 
-API_KEY = "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"
+API_KEY = "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"
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 MODEL = "qwen/qwen2.5-vl-72b-instruct:free"
 
