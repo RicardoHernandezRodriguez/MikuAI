@@ -38,10 +38,15 @@ async def query_openrouter(messages_texts):
         "Content-Type": "application/json",
     }
 
-    content_list = [{"type": "text", "text": txt} for txt in messages_texts]
+    # El modelo solo acepta "content" como string, no como lista
     payload = {
-        "model": "qwen/qwen2.5-72b-instruct:free",
-        "messages": [{"role": "user", "content": content_list}],
+        "model": "qwen/qwen-2.5-72b-instruct:free",
+        "messages": [
+            {
+                "role": "user",
+                "content": "\n".join(messages_texts)
+            }
+        ],
         "max_tokens": 1000,
         "temperature": 0.7,
     }
